@@ -21,7 +21,7 @@
 
   .container {
     width: 90%;
-    max-width: 400px;
+    max-width: 420px;
   }
 
   .text {
@@ -40,7 +40,7 @@
     height: 100%;
     width: 0%;
     background: linear-gradient(90deg, #4caf50, #8bc34a);
-    transition: width 0.08s linear;
+    transition: width 0.1s linear;
   }
 
   img {
@@ -62,6 +62,7 @@
   }
 </style>
 </head>
+
 <body>
 
 <div class="container" id="loader">
@@ -83,21 +84,28 @@
   const sound = document.getElementById("sound");
 
   let percent = 0;
+  let pausedAt92 = false;
 
   const messages = [
     { p: 10, t: "Authenticating network…" },
     { p: 35, t: "Optimizing bandwidth…" },
     { p: 60, t: "Almost there…" },
-    { p: 80, t: "Finalizing connection…" },
-    { p: 92, t: "Stabilizing signal…" }
+    { p: 80, t: "Finalizing connection…" }
   ];
 
   const interval = setInterval(() => {
-    if (percent === 92) {
-      // fake pause
+
+    // Evil pause at 92% (ONLY ONCE)
+    if (percent === 92 && !pausedAt92) {
+      pausedAt92 = true;
       text.textContent = "Network unstable… retrying";
       loader.classList.add("shake");
-      setTimeout(() => loader.classList.remove("shake"), 400);
+
+      setTimeout(() => {
+        loader.classList.remove("shake");
+        percent++; // move forward
+      }, 1200);
+
       return;
     }
 
@@ -110,10 +118,11 @@
 
     if (percent >= 100) {
       clearInterval(interval);
-      sound.play();
+      sound.play().catch(() => {}); // ignore autoplay block
       loader.style.display = "none";
       image.style.display = "block";
     }
+
   }, 100); // 10 seconds total
 </script>
 
