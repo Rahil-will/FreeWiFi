@@ -26,23 +26,26 @@
             inset: 0;
             z-index: 100;
             background: black;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        }
+        /* Ensure the image takes up the full screen correctly */
+        #gorillaImage {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
     </style>
 </head>
 <body class="gradient-bg h-screen flex flex-col items-center justify-center text-white font-sans overflow-hidden">
 
     <!-- Loading Screen -->
-    <div id="loader-container" class="w-full max-w-md p-8 transition-opacity duration-500">
+    <div id="loader-container" class="w-full max-w-md p-8 transition-opacity duration-1000 ease-in-out">
         <div class="flex justify-center mb-10">
             <svg class="w-20 h-20 text-blue-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
             </svg>
         </div>
         
-        <h1 id="statusText" class="text-2xl font-bold mb-8 text-center text-gray-200 h-16">
+        <h1 id="statusText" class="text-2xl font-bold mb-8 text-center text-gray-200 h-16 transition-all">
             Connecting to Network...
         </h1>
 
@@ -54,18 +57,18 @@
     </div>
 
     <!-- The Full Screen Prank Reveal -->
-    <div id="full-screen-reveal">
+    <div id="full-screen-reveal" class="flex flex-col items-center justify-center">
         <img 
             id="gorillaImage"
             src="image.png" 
-            alt="Gotcha!" 
-            class="w-full h-full object-contain md:object-cover"
+            alt="Gotcha!"
         >
-        <div class="absolute inset-0 flex flex-col items-center justify-end pb-20 pointer-events-none">
-            <div class="bg-black/80 px-12 py-6 rounded-2xl border-4 border-red-600 backdrop-blur-lg transform scale-110 shadow-[0_0_50px_rgba(220,38,38,0.5)]">
-                <h2 class="text-5xl md:text-7xl font-black text-red-500 uppercase italic tracking-tighter text-center">
+        <!-- Bottom Message: Responsive and Styled -->
+        <div class="absolute bottom-6 md:bottom-12 left-0 right-0 px-4 flex justify-center pointer-events-none">
+            <div class="bg-black/80 px-6 py-4 md:px-12 md:py-6 rounded-xl md:rounded-2xl border-2 md:border-4 border-red-600 backdrop-blur-lg shadow-[0_0_50px_rgba(220,38,38,0.5)] w-full max-w-[90%] md:max-w-2xl">
+                <h2 class="text-3xl md:text-6xl font-black text-red-500 uppercase italic tracking-tighter text-center leading-tight">
                     FREE WI-FI? <br>
-                    <span class="text-white text-3xl not-italic">Keep dreaming, cheapskate!</span>
+                    <span class="text-white text-xl md:text-3xl not-italic font-bold">Keep dreaming, cheapskate!</span>
                 </h2>
             </div>
         </div>
@@ -85,7 +88,9 @@
 
         let percent = 0;
         let isGlitching = false;
+        let audioUnlocked = false;
 
+        // Milestones for text updates
         const messages = [
             { p: 15, t: "Identifying local gateway..." },
             { p: 35, t: "Initializing security handshake..." },
@@ -93,19 +98,36 @@
             { p: 80, t: "Verifying network protocols..." }
         ];
 
+        // Critical: Unlock audio on any user interaction during loading
+        // Browsers block audio until the user clicks somewhere.
+        function unlockAudio() {
+            if (!audioUnlocked) {
+                revealSound.play().then(() => {
+                    revealSound.pause();
+                    revealSound.currentTime = 0;
+                    audioUnlocked = true;
+                }).catch(() => {});
+            }
+        }
+
+        window.addEventListener('mousedown', unlockAudio);
+        window.addEventListener('touchstart', unlockAudio);
+
         function triggerPrankSequence() {
-            // Start audio - might be blocked if user hasn't interacted
-            revealSound.play().catch(() => {
-                console.log("Audio play blocked by browser. Click required.");
+            // Start audio immediately
+            revealSound.play().catch(e => {
+                console.warn("Audio blocked. Pranks work best if the user clicks the page once while loading.");
             });
             
+            // Fade out the loader slowly (per user request: no "CONNECTED" text)
             loaderContainer.classList.add("opacity-0");
             
-            // Image and Confetti reveal at exactly 4 seconds
+            // Wait 4 seconds for the image reveal
             setTimeout(() => {
                 fullScreenReveal.style.display = 'flex';
                 
-                const duration = 3 * 1000;
+                // Blast Confetti
+                const duration = 4 * 1000;
                 const end = Date.now() + duration;
 
                 (function frame() {
@@ -114,14 +136,14 @@
                         angle: 60,
                         spread: 55,
                         origin: { x: 0 },
-                        colors: ['#ff0000', '#ffffff']
+                        colors: ['#ff0000', '#ffffff', '#000000']
                     });
                     confetti({
                         particleCount: 5,
                         angle: 120,
                         spread: 55,
                         origin: { x: 1 },
-                        colors: ['#ff0000', '#ffffff']
+                        colors: ['#ff0000', '#ffffff', '#000000']
                     });
 
                     if (Date.now() < end) {
@@ -133,7 +155,7 @@
 
         function runLoader() {
             const timer = setInterval(() => {
-                // The 92% Glitch (shaking only the progress wrapper)
+                // The 92% Glitch
                 if (percent === 92 && !isGlitching) {
                     isGlitching = true;
                     statusText.textContent = "SIGNAL UNSTABLE...";
@@ -161,17 +183,13 @@
 
                 if (percent >= 100) {
                     clearInterval(timer);
-                    // Remove any remaining shake classes and set clean connected state
-                    progressWrapper.classList.remove("shake-animation");
-                    statusText.textContent = "CONNECTED!";
-                    statusText.classList.add("text-green-400");
-                    statusText.classList.remove("text-red-500");
-                    setTimeout(triggerPrankSequence, 600);
+                    // Instead of showing "CONNECTED", we trigger the sequence
+                    triggerPrankSequence();
                 }
             }, 80); 
         }
 
-        // Starts immediately when window loads
+        // Auto-start as requested
         window.onload = runLoader;
     </script>
 </body>
